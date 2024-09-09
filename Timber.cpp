@@ -1,6 +1,7 @@
 // This is where our game starts from
 
 #include <SFML/Graphics.hpp>
+#include <sstream>
 
 // "using namespace sf;" eliminates the need to add:"sf::" before classes
 
@@ -9,17 +10,17 @@ int main()
 {
 	//VideoMode class allows you to set parameters for display size and RenderWindow will allow the creation of windows for 2D drawing
 		
-		VideoMode vm(1920, 1080);
-		RenderWindow window(vm, "Timber!!!", Style::Fullscreen);
+	VideoMode vm(1920, 1080);
+	RenderWindow window(vm, "Timber!!!", Style::Fullscreen);
 	
 	//TEXTURES AND SPRITES
 	//Texture and Sprite class work together to put a sprite on screen. A sprite needs a texture for it to be "visible" and in this case we made a background.
 	
-		Texture textureBackground;
-		textureBackground.loadFromFile("graphics/background.png");
-		Sprite spriteBackground;
-		spriteBackground.setTexture(textureBackground);
-		spriteBackground.setPosition(0, 0);
+	Texture textureBackground;
+	textureBackground.loadFromFile("graphics/background.png");
+	Sprite spriteBackground;
+	spriteBackground.setTexture(textureBackground);
+	spriteBackground.setPosition(0, 0);
 
 	const float TREE_HORIZONTAL_POSITION = 810;
 	const float TREE_VERTICAL_POSITION = 0;
@@ -42,6 +43,7 @@ int main()
 	spriteBee.setTexture(textureBee);
 	spriteBee.setPosition(0, 800);
 	bool beeActive = false;
+	bool beeGrounded = false;
 	float beeSpeed = 0.0f;
 	
 	//Clouds
@@ -58,73 +60,263 @@ int main()
 	spriteCloud3.setTexture(textureCloud);
 	spriteCloud3.setPosition(0, 500);
 		
-	bool cloud1active = false;
-	bool cloud2active = false;
-	bool cloud3active = false;
+	bool cloud1Active = false;
+	bool cloud2Active = false;
+	bool cloud3Active = false;
 	
-	float cloud1speed = 0.0f;
-	float cloud2speed = 0.0f;
-	float cloud3speed = 0.0f;
+	float cloud1Speed = 0.0f;
+	float cloud2Speed = 0.0f;
+	float cloud3Speed = 0.0f;
 		
 	//Create an object called clock to calculate the time elapsed
 		
 	Clock clock;
 
-	//A while loop continues to execute everything inside {} over and over every frame. The If statement inside allows us to close the loop.
+	//Time bar
+	RectangleShape timeBar;
+	float timeBarStartWidth = 400;
+	float timeBarHeight = 80;
+	timeBar.setSize(Vector2f(timeBarStartWidth, timeBarHeight));
+	timeBar.setFillColor(Color::Red);
+	timeBar.setPosition((1920 / 2) - timeBarStartWidth / 2, 980);
+
+	Time gameTimeTotal;
+	float timeRemaining = 6.0f;
+	float timeBarWidthPerSecond = timeBarStartWidth / timeRemaining;
+
+	// Track whether the game is running
+	bool paused = true;
 	
+	//Draw some text
+	int score = 0;
+
+	//Text class and objects
+	Text messageText;
+	Text scoreText;
+
+	//Choose a font
+	Font font;
+	font.loadFromFile("fonts/KOMIKAP_.ttf");
+
+	//Set the font to message
+	messageText.setFont(font);
+	scoreText.setFont(font);
+
+	//Assign message
+	messageText.setString("Press Enter to start!");
+	scoreText.setString("Score = 0");
+
+	//Font size
+	messageText.setCharacterSize(75);
+	scoreText.setCharacterSize(100);
+
+	//Font Color
+	messageText.setFillColor(Color::White);
+	scoreText.setFillColor(Color::White);
+
+	//Position the text
+	FloatRect textRect = messageText.getLocalBounds();
+	messageText.setOrigin(textRect.left +
+		textRect.width / 2.0f,
+		textRect.top +
+		textRect.height / 2.0f);
+
+	messageText.setPosition(1920 / 2.0, 1080 / 2.0f);
+	scoreText.setPosition(20, 20);
+
+
+	//A while loop continues to execute everything inside {} over and over every frame. The If statement inside allows us to close the loop.
 	while (window.isOpen())
 	{
+		// This checks to see if a key is being pressed and we specify the key esc.
 		if (Keyboard::isKeyPressed(Keyboard::Escape))
 		{
 			window.close();
 		}
-		
-		//window.clear will clear everything from the last frame window
-		
-		window.clear();
-		
-		// Remember that "while" creates a loop and clock.restart calculates the time between each loop and dt holds that value.
-		
-		Time dt = clock.restart();
 
-		// ! (NOT) = false
-		if (!beeActive)
+
+		//track if game is running
+		if (Keyboard::isKeyPressed(Keyboard::Return))
 		{
-			srand((int)time(0));
-			beeSpeed = (rand() % 200) + 200;
-
-			srand((int)time(0) * 10);
-			float height = (rand() % 500) + 500;
-			spriteBee.setPosition(2000, height);
-			beeActive = true;
+			paused = false;
+		
+			//Reset the time and the score
+			score = 0;
+			timeRemaining = 6;
+		
 		}
-		else
+		
+		if (timeRemaining <= 0.0f)
 		{
-			spriteBee.setPosition(
-				spriteBee.getPosition().x -
-				(beeSpeed * dt.asSeconds()),
-				spriteBee.getPosition().y);
+			paused = true;
+			messageText.setString("Out of time!!");
 
-			if (spriteBee.getPosition().x < -100)
+			FloatRect textRect = messageText.getLocalBounds();
+			messageText.setOrigin(textRect.left +
+				textRect.width / 2.0f,
+				textRect.top +
+				textRect.height / 2.0f);
+
+			messageText.setPosition(1920 / 2.0f, 1080 / 2.0f);
+		}
+			
+		if (!paused)
+		{
+
+			// Remember that "while" creates a loop and clock.restart calculates the time between each loop and dt holds that value.
+			Time dt = clock.restart();
+
+
+			//Subtract from the amount of time remaining
+			timeRemaining -= dt.asSeconds();
+
+			//Size up the time bar
+			timeBar.setSize(Vector2f(timeBarWidthPerSecond *
+				timeRemaining, timeBarHeight));
+
+			// Bee movement
+			if (!beeActive)
 			{
-				beeActive = false;
+					srand((int)time(0));
+					beeSpeed = (rand() % 200) + 100;
+
+					srand((int)time(0) * 10);
+					float height = (rand() % 500) + 400;
+					spriteBee.setPosition(2000, height);
+					beeActive = true;
 			}
+			else
+			{
+				srand((int)time(0));
+				float height = (rand() % 500) + 400;
+
+				spriteBee.setPosition(
+					spriteBee.getPosition().x -
+					(beeSpeed * dt.asSeconds()),
+					spriteBee.getPosition().y);
+
+				if (spriteBee.getPosition().x < -100)
+				{
+					beeActive = false;
+				}
+			}
+
+				//Bee going up and down hehe
+			if (!beeGrounded)
+			{
+				spriteBee.setPosition(
+					spriteBee.getPosition().x,
+					spriteBee.getPosition().y +
+					(beeSpeed * dt.asSeconds()));
+				if (spriteBee.getPosition().y >= 899)
+				{
+					beeGrounded = true;
+				}
+			}
+			else
+			{
+				spriteBee.setPosition(
+					spriteBee.getPosition().x,
+					spriteBee.getPosition().y -
+					(beeSpeed * dt.asSeconds()));
+				if (spriteBee.getPosition().y <= 499)
+				{
+					beeGrounded = false;
+				}
+
+			}
+			//Cloud movement
+			if (!cloud1Active)
+			{
+				srand((int)time(0) * 10);
+				cloud1Speed = (rand() % 200);
+
+				srand((int)time(0) * 10);
+				float height = (rand() % 150);
+				spriteCloud1.setPosition(-200, height);
+				cloud1Active = true;
+			}
+			else
+			{
+				spriteCloud1.setPosition(
+					spriteCloud1.getPosition().x +
+					(cloud1Speed * dt.asSeconds()),
+					spriteCloud1.getPosition().y);
+				if (spriteCloud1.getPosition().x > 1920)
+				{
+					cloud1Active = false;
+				}
+			}
+
+			if (!cloud2Active)
+			{
+				srand((int)time(0) * 20);
+				cloud2Speed = (rand() % 200);
+
+				srand((int)time(0) * 20);
+				float height = (rand() % 300) - 150;
+				spriteCloud2.setPosition(-200, height);
+				cloud2Active = true;
+			}
+			else
+			{
+				spriteCloud2.setPosition(
+					spriteCloud2.getPosition().x +
+					(cloud2Speed * dt.asSeconds()),
+					spriteCloud2.getPosition().y);
+				if (spriteCloud2.getPosition().x > 1920)
+				{
+					cloud2Active = false;
+				}
+			}
+
+			if (!cloud3Active)
+			{
+				srand((int)time(0) * 30);
+				cloud3Speed = (rand() % 200);
+
+				srand((int)time(0) * 30);
+				float height = (rand() % 450) - 150;
+				spriteCloud3.setPosition(-200, height);
+				cloud3Active = true;
+			}
+			else				
+			{
+				spriteCloud3.setPosition(
+					spriteCloud3.getPosition().x +
+					(cloud3Speed * dt.asSeconds()),
+					spriteCloud3.getPosition().y);
+				if (spriteCloud3.getPosition().x > 1920)
+				{
+					cloud3Active = false;
+				}
+			}
+			//Update the score text
+			std::stringstream ss;
+			ss << "Score = " << score;
+			scoreText.setString(ss.str());
+
 		}
-		//window.draw will draw the game scene or "staging area" using spriteBackground object
-		
+		//window.draw will draw the game scene or "staging area". They also work in layers so be mindful of the order images are drawn.
 		window.draw(spriteBackground);
 		window.draw(spriteCloud1);
 		window.draw(spriteCloud2);
 		window.draw(spriteCloud3);
 		window.draw(spriteTree);
 		window.draw(spriteBee);
-		
+		window.draw(scoreText);
+		window.draw(timeBar);
+		if (paused)
+		{
+			window.draw(messageText);
+		}
+
+
 		//window.display will show everything we just drew
-		
 		window.display();
-		
-		// This checks to see if a key is being pressed and we specify the key esc.
-		
+
+		//window.clear will clear everything from the last frame window
+		window.clear();
 	}
 
 	return 0;

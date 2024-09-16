@@ -46,6 +46,17 @@ int main()
 	spriteTree.setTexture(textureTree);
 	spriteTree.setPosition(TREE_HORIZONTAL_POSITION, TREE_VERTICAL_POSITION);
 	
+	//additional trees
+	const int MORE_TREES = 2;
+	Sprite treeSprite[MORE_TREES];
+	for (int i = 0; i < 2; i++)
+	{
+		treeSprite[i].setTexture(textureTree);
+	}
+	
+	treeSprite[0].setPosition(1600, 0);
+	treeSprite[1].setPosition(100,0);
+
 	//Bee
 	
 	Texture textureBee;
@@ -62,7 +73,8 @@ int main()
 	
 	Texture	textureCloud;
 	textureCloud.loadFromFile("graphics/cloud.png");
-	Sprite spriteCloud1;
+	
+	/*Sprite spriteCloud1;
 	spriteCloud1.setTexture(textureCloud);
 	spriteCloud1.setPosition(0, 0);
 	Sprite spriteCloud2;
@@ -79,7 +91,23 @@ int main()
 	float cloud1Speed = 0.0f;
 	float cloud2Speed = 0.0f;
 	float cloud3Speed = 0.0f;
-		
+	*/
+
+	//clouds using arrays
+	const int NUM_CLOUDS = 6;
+	Sprite clouds[NUM_CLOUDS];
+	bool cloudActive[NUM_CLOUDS];
+	float cloudSpeed[NUM_CLOUDS];
+
+	//clouds using arrays
+	for (int i = 0; i < NUM_CLOUDS; i++)
+	{
+		float height = i * 100;
+		clouds[i].setTexture(textureCloud);
+		clouds[i].setPosition(-100, height);
+		cloudActive[i] = false;
+		cloudSpeed[i] = 0;
+	}
 	//Create an object called clock to calculate the time elapsed
 		
 	Clock clock;
@@ -395,7 +423,33 @@ int main()
 
 			}
 			
-			//Cloud movement
+			//Clouds using array
+			for (int i = 0; i < 6; i++)
+			{
+				if (!cloudActive[i])
+				{
+					srand((int)time(0)* i);
+					cloudSpeed[i] = (rand() % 200);
+
+					srand((int)time(0)* i);
+					float height = (rand() % 150);
+					clouds[i].setPosition(-100, height);
+					cloudActive[i] = true;
+				}
+				else
+				{
+					clouds[i].setPosition(clouds[i].getPosition().x +
+						(cloudSpeed[i] * dt.asSeconds()),
+						clouds[i].getPosition().y);
+
+					if (clouds[i].getPosition().x > 2000)
+					{
+						cloudActive[i] = false;
+					}
+				}
+			}
+
+			/*Cloud movement
 			if (!cloud1Active)
 			{
 				srand((int)time(0) * 10);
@@ -439,7 +493,6 @@ int main()
 					cloud2Active = false;
 				}
 			}
-
 			if (!cloud3Active)
 			{
 				srand((int)time(0) * 30);
@@ -461,6 +514,8 @@ int main()
 					cloud3Active = false;
 				}
 			}
+			*/
+
 			//Update the score text
 			std::stringstream ss;
 			ss << "Score = " << score;
@@ -535,15 +590,21 @@ int main()
 		}
 		//window.draw will draw the game scene or "staging area". They also work in layers so be mindful of the order images are drawn.
 		window.draw(spriteBackground);
-		window.draw(spriteCloud1);
+		/*window.draw(spriteCloud1);
 		window.draw(spriteCloud2);
 		window.draw(spriteCloud3);
+		*/
+		for (int i = 0; i < NUM_CLOUDS; i++)
+		{
+			window.draw(clouds[i]);
+		}
 		for (int i = 0; i < NUM_BRANCHES; i++)
 		{
 			window.draw(branches[i]);
 		}
 		window.draw(spriteTree);
-		window.draw(spriteBee);
+		window.draw(treeSprite[0]);
+		window.draw(treeSprite[1]);
 		window.draw(scoreText);
 		window.draw(timeBar);
 		if (paused)
@@ -553,6 +614,7 @@ int main()
 		window.draw(spritePlayer);
 		window.draw(spriteAxe);
 		window.draw(spriteLog);
+		window.draw(spriteBee);
 		window.draw(spriteRIP);
 
 		//window.display will show everything we just drew

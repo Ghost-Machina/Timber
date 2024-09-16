@@ -4,8 +4,19 @@
 #include <sstream>
 
 // "using namespace sf;" eliminates the need to add:"sf::" before classes
-
 using namespace sf;
+
+//Function declaration
+void updateBranches(int seed);
+
+const int NUM_BRANCHES = 6;
+Sprite branches[NUM_BRANCHES];
+
+//Where is the player/branch?
+//Left or Right
+enum class side {LEFT, RIGHT, NONE};
+side branchPositions[NUM_BRANCHES];
+
 int main()
 {
 	//VideoMode class allows you to set parameters for display size and RenderWindow will allow the creation of windows for 2D drawing
@@ -124,6 +135,43 @@ int main()
 	messageText.setPosition(1920 / 2.0, 1080 / 2.0f);
 	scoreText.setPosition(20, 20);
 
+	//Prepare 5 branches
+	Texture textureBranch;
+	textureBranch.loadFromFile("graphics/branch.png");
+
+	//int i becomes a container that represents each position in the array
+	//Set the texture for each branch sprite
+	for (int i = 0; i < NUM_BRANCHES; i++)
+	{
+		branches[i].setTexture(textureBranch);
+		branches[i].setPosition(-2000, -2000);
+
+		branches[i].setOrigin(220, 20);
+	}
+
+	Texture texturePlayer;
+	texturePlayer.loadFromFile("graphics/player.png");
+	Sprite spritePlayer;
+	spritePlayer.setTexture(texturePlayer);
+	spritePlayer.setPosition(580, 720);
+
+	//The player starts on the left
+	side playerSide = side::LEFT;
+
+	//Prepare the gravestone
+	Texture textureRIP;
+	textureRIP.loadFromFile("graphics/rip.png");
+	Sprite spriteRIP;
+	spriteRIP.setTexture(textureRIP);
+	spriteRIP.setPosition(600, 860);
+
+	//Prepare the axe
+	Texture textureAxe;
+	textureAxe.loadFromFile("graphics/axe.png");
+	Sprite spriteAxe;
+	spriteAxe.setTexture(textureAxe);
+	spriteAxe.setPosition(700, 830);
+
 
 	//A while loop continues to execute everything inside {} over and over every frame. The If statement inside allows us to close the loop.
 	while (window.isOpen())
@@ -145,21 +193,7 @@ int main()
 			timeRemaining = 6;
 		
 		}
-		
-		if (timeRemaining <= 0.0f)
-		{
-			paused = true;
-			messageText.setString("Out of time!!");
-
-			FloatRect textRect = messageText.getLocalBounds();
-			messageText.setOrigin(textRect.left +
-				textRect.width / 2.0f,
-				textRect.top +
-				textRect.height / 2.0f);
-
-			messageText.setPosition(1920 / 2.0f, 1080 / 2.0f);
-		}
-			
+	
 		if (!paused)
 		{
 
@@ -173,6 +207,20 @@ int main()
 			//Size up the time bar
 			timeBar.setSize(Vector2f(timeBarWidthPerSecond *
 				timeRemaining, timeBarHeight));
+
+			if (timeRemaining <= 0.0f)
+			{
+				paused = true;
+				messageText.setString("Out of time!!");
+
+				FloatRect textRect = messageText.getLocalBounds();
+				messageText.setOrigin(textRect.left +
+					textRect.width / 2.0f,
+					textRect.top +
+					textRect.height / 2.0f);
+
+				messageText.setPosition(1920 / 2.0f, 1080 / 2.0f);
+			}
 
 			// Bee movement
 			if (!beeActive)
@@ -201,7 +249,7 @@ int main()
 				}
 			}
 
-				//Bee going up and down hehe
+			//Bee going up and down hehe
 			if (!beeGrounded)
 			{
 				spriteBee.setPosition(
@@ -225,6 +273,7 @@ int main()
 				}
 
 			}
+			
 			//Cloud movement
 			if (!cloud1Active)
 			{
@@ -296,12 +345,39 @@ int main()
 			ss << "Score = " << score;
 			scoreText.setString(ss.str());
 
+			//Update the branch sprites
+			for (int i = 0; i < NUM_BRANCHES; i++)
+			{
+				float height = i * 150;
+				if (branchPositions[i] == side::LEFT)
+				{
+					branches[i].setPosition(610, height);
+
+					branches[i].setRotation(180);
+
+				}
+				else if (branchPositions[i] == side::RIGHT)
+				{
+					branches[i].setPosition(1330, height);
+
+					branches[i].setRotation(0);
+				}
+				else
+				{
+					branches[i].setPosition(3000, height);
+				}
+			}
+
 		}
 		//window.draw will draw the game scene or "staging area". They also work in layers so be mindful of the order images are drawn.
 		window.draw(spriteBackground);
 		window.draw(spriteCloud1);
 		window.draw(spriteCloud2);
 		window.draw(spriteCloud3);
+		for (int i = 0; i < NUM_BRANCHES; i++)
+		{
+			window.draw(branches[i]);
+		}
 		window.draw(spriteTree);
 		window.draw(spriteBee);
 		window.draw(scoreText);
@@ -310,8 +386,7 @@ int main()
 		{
 			window.draw(messageText);
 		}
-
-
+		
 		//window.display will show everything we just drew
 		window.display();
 
@@ -320,4 +395,32 @@ int main()
 	}
 
 	return 0;
+}
+//Function definition
+void updateBranches(int seed)
+{
+	for (int j = NUM_BRANCHES - 1; j > 0; j--)
+	{
+		branchPositions[j] = branchPositions[j - 1];
+	}
+
+	//Spawn a new branch at position 0
+	//LEFT, RIGHT, or NONE
+	srand((int)time(0) + seed);
+	int r = (rand() % 5);
+
+	switch (r) 
+	{
+		case 0:
+			branchPositions[0] = side::LEFT;
+			break;
+
+		case 1:
+			branchPositions[0] = side::RIGHT;
+			break;
+
+		default:
+			branchPositions[0] = side::NONE;
+			break;
+	}
 }

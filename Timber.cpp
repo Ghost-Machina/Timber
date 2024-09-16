@@ -1,7 +1,8 @@
 // This is where our game starts from
-
+#include <SFML/Audio.hpp>
 #include <SFML/Graphics.hpp>
 #include <sstream>
+
 
 // "using namespace sf;" eliminates the need to add:"sf::" before classes
 using namespace sf;
@@ -172,16 +173,63 @@ int main()
 	spriteAxe.setTexture(textureAxe);
 	spriteAxe.setPosition(700, 830);
 
+	//Line the axe up with the tree
+	const float AXE_POSITION_LEFT = 700;
+	const float AXE_POSITION_RIGHT = 1075;
+
+	//Prepare the flying log
+	Texture textureLog;
+	textureLog.loadFromFile("graphics/log.png");
+	Sprite spriteLog;
+	spriteLog.setTexture(textureLog);
+	spriteLog.setPosition(810, 720);
+
+	//useful log related variables
+	bool logActive = false;
+	float logSpeedX = 1000;
+	float logSpeedY = -1500;
+
+	bool acceptInput = false;
+
+	//prepare the sound
+	SoundBuffer chopBuffer;
+	chopBuffer.loadFromFile("sound/chop.wav");
+	Sound chop;
+	chop.setBuffer(chopBuffer);
+
+	SoundBuffer deathBuffer;
+	deathBuffer.loadFromFile("sound/death.wav");
+	Sound death;
+	death.setBuffer(deathBuffer);
+
+	//Out of time
+	SoundBuffer ootBuffer;
+	ootBuffer.loadFromFile("sound/out_of_time.wav");
+	Sound outOfTime;
+	outOfTime.setBuffer(ootBuffer);
 
 	//A while loop continues to execute everything inside {} over and over every frame. The If statement inside allows us to close the loop.
 	while (window.isOpen())
 	{
+		Event event;
+			while (window.pollEvent(event))
+			{
+				if (event.type == Event::KeyReleased && !paused)
+				{
+					//listen for key presses again
+					acceptInput = true;
+
+					//hide the axe
+					spriteAxe.setPosition(2000,
+						spriteAxe.getPosition().y);
+				}
+			}
+		
 		// This checks to see if a key is being pressed and we specify the key esc.
 		if (Keyboard::isKeyPressed(Keyboard::Escape))
 		{
 			window.close();
 		}
-
 
 		//track if game is running
 		if (Keyboard::isKeyPressed(Keyboard::Return))
@@ -192,8 +240,77 @@ int main()
 			score = 0;
 			timeRemaining = 6;
 		
+			//Make all the branches disappear
+			for (int i = 1; i < NUM_BRANCHES; i++)
+			{
+				branchPositions[i] = side::NONE;
+			}
+
+			//make sure the gravestone is hidden
+			spriteRIP.setPosition(675, 2000);
+
+			//move player into position
+			spritePlayer.setPosition(580, 720);
+
+			acceptInput = true;
+
 		}
-	
+
+		if (acceptInput)
+		{
+			if (Keyboard::isKeyPressed(Keyboard::Right))
+			{
+				playerSide = side::RIGHT;
+				score++;
+
+				//add to amount of time remaining
+				timeRemaining += (2 / score) + .15;
+
+				spriteAxe.setPosition(AXE_POSITION_RIGHT,
+					spriteAxe.getPosition().y);
+				spritePlayer.setPosition(1200, 720);
+
+				//update the branches
+				updateBranches(score);
+
+				//set the log flying to the left
+				spriteLog.setPosition(810, 720);
+				logSpeedX = -5000;
+				logActive = true;
+
+				acceptInput = false;
+
+				//play chop sound
+				chop.play();
+			}
+			if (Keyboard::isKeyPressed(Keyboard::Left))
+			{
+				playerSide = side::LEFT;
+				score++;
+
+				//add to amount of time remaining
+				timeRemaining += (2 / score) + .15;
+
+				spriteAxe.setPosition(AXE_POSITION_LEFT,
+					spriteAxe.getPosition().y);
+				spritePlayer.setPosition(580, 720);
+
+				//update branches
+				updateBranches(score);
+
+				//set the log flying to the right
+				spriteLog.setPosition(810, 720);
+				logSpeedX = 5000;
+				logActive = true;
+
+				acceptInput = false;
+				
+				//play chop sound
+				chop.play();
+			}
+
+		}
+
 		if (!paused)
 		{
 
@@ -220,6 +337,10 @@ int main()
 					textRect.height / 2.0f);
 
 				messageText.setPosition(1920 / 2.0f, 1080 / 2.0f);
+
+				//play the out of time sound
+				outOfTime.play();
+
 			}
 
 			// Bee movement
@@ -367,6 +488,49 @@ int main()
 					branches[i].setPosition(3000, height);
 				}
 			}
+			//handle a flying log
+			if (logActive)
+			{
+				spriteLog.setPosition(
+					spriteLog.getPosition().x +
+					(logSpeedX * dt.asSeconds()),
+					spriteLog.getPosition().y +
+					(logSpeedY * dt.asSeconds()));
+				//has the log reached the right or left hand edge?
+				if (spriteLog.getPosition().x < -100 ||
+					spriteLog.getPosition().x > 2000)
+				{
+					logActive = false;
+					spriteLog.setPosition(810, 720);
+				}
+			}
+
+			if (branchPositions[5] == playerSide)
+			{
+				paused = true;
+				acceptInput = false;
+
+				//draw the gravestone
+				spriteRIP.setPosition(525, 760);
+
+				//hide the player
+				spritePlayer.setPosition(2000, 660);
+
+				//change the text of the message
+				messageText.setString("SQUISHED!!");
+
+				//center it on the screen
+				FloatRect textRect = messageText.getLocalBounds();
+				messageText.setOrigin(textRect.left +
+					textRect.width / 2.0f,
+					textRect.top + textRect.height / 2.0f);
+
+				messageText.setPosition(1920 / 2.0f,
+					1080 / 2.0f);
+
+				//play the death sound
+				death.play();
+			}
 
 		}
 		//window.draw will draw the game scene or "staging area". They also work in layers so be mindful of the order images are drawn.
@@ -386,7 +550,11 @@ int main()
 		{
 			window.draw(messageText);
 		}
-		
+		window.draw(spritePlayer);
+		window.draw(spriteAxe);
+		window.draw(spriteLog);
+		window.draw(spriteRIP);
+
 		//window.display will show everything we just drew
 		window.display();
 
